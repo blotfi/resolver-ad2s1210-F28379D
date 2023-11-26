@@ -31,14 +31,14 @@ but also read the data
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/d590fbc4-58e5-4601-8568-f551a7fc39b0)
 
 To set the resolution, we need to send on SPI :
-```
+```c
 SpiaRegs.SPITXBUF = AD2S1210_REG_CNTRL<<8;
 SpiaRegs.SPITXBUF = 0x7F<<8; // 16 bits and 0x7E for 12 bit
 ```
 **Important** For 8-bit data, you need to shift left (LSL) by 8 bits before sending it to SPITXBUF = data << 8;
 
 The complete code, with the correct SPI /CS and timing:
-```
+```c
  // Setting resolution to 16bits
     GPIO_WritePin(SCS_GPIO, 0);
     SpiaRegs.SPITXBUF = AD2S1210_REG_CNTRL<<8;
@@ -58,7 +58,7 @@ The complete code, with the correct SPI /CS and timing:
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/541c8f26-475d-431e-a8f9-18830cfbcd0c)
 
 Even if it is 10 kHz, I noticed that we must configure it, see `void ad2s1210_conf(void);`
-```
+```c
     GPIO_WritePin(SCS_GPIO, 0);
     SpiaRegs.SPITXBUF = AD2S1210_REG_EXC_FREQ<<8;
     while(SpiaRegs.SPISTS.bit.INT_FLAG == 0);
@@ -89,7 +89,7 @@ I sample, then I read the data
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/d639f612-28e5-4f75-97ef-ac2c20fb1273)
 
 Here is how to Sample
-```
+```c
 void AD2S1210_SAMPLING() {
     GPIO_WritePin(AD2S1210_SAMPLE, 1);
     GPIO_WritePin(AD2S1210_SAMPLE, 0);
@@ -124,6 +124,34 @@ This is due to F28379D SPI which is a 16 bits one than can be confugured in 8 bi
 
 While reading from SPIRXBUF is aligned to the least significant bit (LSB)
 
+To read a register, we must first transmit the register to be read on the SPI TX register than we do a dummy read on the SPI RX register,
+then we transmit a dummy (0x00) on TX and we read the actual value.
+
+As we need to read 16 bits, here is how we do
+```c
+Uint16 AD2S1210_Read_Pos()
+{
+Uint16 dummy;
+    GPIO_WritePin(SCS_GPIO, 0);
+    SpiaRegs.SPITXBUF = AD2S1210_REG_POS_H<<8;     // ask High Pos
+    while(SpiaRegs.SPISTS.bit.INT_FLAG == 0);
+    dummy = SpiaRegs.SPIRXBUF;                     // dummy read to clear the INT_FLAG bit
+    GPIO_WritePin(SCS_GPIO, 1);
+    //DELAY_US(0.01); //10ns
+    GPIO_WritePin(SCS_GPIO, 0);
+    SpiaRegs.SPITXBUF = AD2S1210_REG_POS_L<<8;     // ask Low Pos
+    while(SpiaRegs.SPISTS.bit.INT_FLAG == 0);
+    dataH = SpiaRegs.SPIRXBUF;                     // Read High
+    GPIO_WritePin(SCS_GPIO, 1);
+    //DELAY_US(0.01); //10ns
+    GPIO_WritePin(SCS_GPIO, 0);
+    SpiaRegs.SPITXBUF = 0x00;                      // dummy write to push data on SPI RX
+    while(SpiaRegs.SPISTS.bit.INT_FLAG == 0);
+    dataL = SpiaRegs.SPIRXBUF;                     // Read Low
+    GPIO_WritePin(SCS_GPIO, 1);
+    return (dataH << 8) | dataL;                   // return the 16 bits Pos 
+}
+```
 
 **Configuration of SPI on F28379d**
 
@@ -135,7 +163,8 @@ The AD2S1210 /WR line is the SPI /CS line. Do not confuse with AD2S1210 /CS that
 
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/904e7077-0eef-4c34-899e-cce8bdd5b72c)
 
-```#define  SDI_GPIO       58
+```c
+#define  SDI_GPIO       58
 #define  SDO_GPIO       59
 #define  CLK_GPIO       60
 #define  CLK_MUX        15
@@ -154,7 +183,8 @@ The AD2S1210 /WR line is the SPI /CS line. Do not confuse with AD2S1210 /CS that
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/3fbcafc7-7256-40a6-a3da-2432445f258f)
 
 For example if the USB power is not enough, I started having:
-```ad2s1210_fault
+```
+ad2s1210_fault
 0x08 LOT
 0x68 LOT LOS DOS
 0x60 LOS DOS
