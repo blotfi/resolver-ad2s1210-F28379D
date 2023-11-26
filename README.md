@@ -6,7 +6,7 @@ This code interface the F28379D to an AD2S1210 board using SPI (Serial Periphera
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/5845176b-20b5-4692-8104-f86653ddf8e3)
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/d6ee8b42-6b69-4d23-beb2-9537433a9469)
 
-The AD2S1210 creates an excitation signal to be sent to the resolver and decode the sin/cos signals to an absolute position
+The AD2S1210 creates an excitation signal to be sent to the resolver and decodes the sin/cos signals to an absolute position
 and also gives the rotational speed
 
 You can buy the board that interface the AD2S1210 on 
@@ -35,7 +35,7 @@ To set the resolution, we need to send on SPI :
 SpiaRegs.SPITXBUF = AD2S1210_REG_CNTRL<<8;
 SpiaRegs.SPITXBUF = 0x7F<<8; // 16 bits and 0x7E for 12 bit
 ```
-**Important**For 8-bit data, you need to shift left (LSL) by 8 bits before sending it to SPITXBUF = data << 8;
+**Important** For 8-bit data, you need to shift left (LSL) by 8 bits before sending it to SPITXBUF = data << 8;
 
 The complete code, with the correct SPI /CS and timing:
 ```
@@ -54,6 +54,7 @@ The complete code, with the correct SPI /CS and timing:
 ```
 
 **Setting the excitation frequency**
+
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/541c8f26-475d-431e-a8f9-18830cfbcd0c)
 
 Even if it is 10 kHz, I noticed that we must configure it, see `void ad2s1210_conf(void);`
@@ -74,6 +75,7 @@ Even if it is 10 kHz, I noticed that we must configure it, see `void ad2s1210_co
 ```
 
 **Sampling the data**
+
 **Sample** line must be put Low than High in order to do the conversion
 
 this is an example of reading the position, velocity and error (fault) by using  A0 an A1 after a Sample request
@@ -99,7 +101,9 @@ void AD2S1210_SAMPLING() {
 }
  ```
 
-timing: 2 CLK period then 4 CLK period
+timing:
+
+2 CLK periods then 4 CLK periods
 
 As I am not sure about the fclk, which should be less than 6.144 MHz (Datasheet) but on the board there is a 10 MHz quartz...
 I used my SPI CLK (1 MHz) as a reference for my ticks.
@@ -114,7 +118,7 @@ Then we can read the position and/or the velocity and the error registers.
 
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/15e36acd-991f-450b-bcc5-524aedd0725c)
 
-**Important**For 8-bit data, you need to shift left (LSL) by 8 bits before sending it to SPITXBUF = data << 8;
+**Important** For 8-bit data, you need to shift left (LSL) by 8 bits before sending it to SPITXBUF = data << 8;
 
 This is due to F28379D SPI which is a 16 bits one than can be confugured in 8 bits
 
@@ -145,7 +149,7 @@ The AD2S1210 /WR line is the SPI /CS line. Do not confuse with AD2S1210 /CS that
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/3db789f8-4f4b-4769-bd3f-909ac0e6714e)
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/0b8555a2-06c1-4840-837f-bcc7921ded2f)
 
-Faults than can occur
+**Faults than can occur**
 
 ![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/3fbcafc7-7256-40a6-a3da-2432445f258f)
 
@@ -156,6 +160,9 @@ For example if the USB power is not enough, I started having:
 0x60 LOS DOS
 0x00 No error
 ```
+![image](https://github.com/blotfi/resolver-ad2s1210-F28379D/assets/24873186/5153ece0-7e45-4fd5-8915-2e7350597e2f)
+
+There are 2 red leds that powers when LOT and DOS faults appear
 
 special thanks to https://github.com/arcoslab/omni-base/tree/master/baldor_control
 for their code for STM which inspires me
